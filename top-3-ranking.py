@@ -1,9 +1,3 @@
-import streamlit as st
-import pandas as pd
-from http.client import HTTPSConnection
-from base64 import b64encode
-from json import loads, dumps
-
 class RestClient:
     domain = "api.dataforseo.com"
 
@@ -33,6 +27,13 @@ class RestClient:
         else:
             data_str = dumps(data)
         return self.request(path, 'POST', data_str)
+
+
+import streamlit as st
+import pandas as pd
+from http.client import HTTPSConnection
+from base64 import b64encode
+from json import loads, dumps
 
 def get_data(keyword, client, location_code, language_code, device, domain, num_results):
     post_data = {
