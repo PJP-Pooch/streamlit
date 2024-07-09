@@ -25,8 +25,9 @@ cse_id = st.text_input("Enter your Custom Search Engine ID:")
 site = st.text_input("Enter the site (e.g., 'example.com'):")
 
 # File uploader
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 st.text('# Assuming the columns are "keyword", "target_page"')
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+
 
 if uploaded_file and api_key and cse_id and site:
     # Read the CSV file
