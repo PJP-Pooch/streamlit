@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-# from bs4 import BeautifulSoup
 import io
 
 # Function to search using Google Custom Search JSON API
@@ -37,50 +36,51 @@ if api_key and cse_id and site and keywords and target_urls:
     if len(keyword_list) != len(target_url_list):
         st.error("The number of keywords must match the number of target URLs.")
     else:
-        # Create a dataframe from the input lists
-        df = pd.DataFrame({
-            'keyword': keyword_list,
-            'target_page': target_url_list
-        })
+        # Button to run the script
+        if st.button("Run Script"):
+            # Create a dataframe from the input lists
+            df = pd.DataFrame({
+                'keyword': keyword_list,
+                'target_page': target_url_list
+            })
 
-        # Create a new dataframe to store results
-        results_df = pd.DataFrame()
+            # Create a new dataframe to store results
+            results_df = pd.DataFrame()
 
-        for index, row in df.iterrows():
-            # Search query
-            query = f"site:{site} {row['keyword']} -inurl:{row['target_page']}"
+            for index, row in df.iterrows():
+                # Search query
+                query = f"site:{site} {row['keyword']} -inurl:{row['target_page']}"
 
-            # Get the search results
-            results = search(query, api_key, cse_id)
+                # Get the search results
+                results = search(query, api_key, cse_id)
 
-            # Extract the URLs of the search results
-            link_list = [result['link'] for result in results.get('items', [])]
+                # Extract the URLs of the search results
+                link_list = [result['link'] for result in results.get('items', [])]
 
-            # If less than 10 links are returned, fill the rest with None
-            while len(link_list) < 10:
-                link_list.append(None)
+                # If less than 10 links are returned, fill the rest with None
+                while len(link_list) < 10:
+                    link_list.append(None)
 
-            # Append the list of links to the results dataframe
-            results_df = pd.concat([results_df, pd.Series(link_list, name=index)], axis=1)
+                # Append the list of links to the results dataframe
+                results_df = pd.concat([results_df, pd.Series(link_list, name=index)], axis=1)
 
-        # Transpose the results dataframe and set column names
-        results_df = results_df.transpose()
-        results_df.columns = [f'link{i+1}' for i in range(10)]
+            # Transpose the results dataframe and set column names
+            results_df = results_df.transpose()
+            results_df.columns = [f'link{i+1}' for i in range(10)]
 
-        # Concatenate the original dataframe with the results dataframe
-        df = pd.concat([df, results_df], axis=1)
+            # Concatenate the original dataframe with the results dataframe
+            df = pd.concat([df, results_df], axis=1)
 
-        # Write the updated dataframe to a CSV file and provide a download link
-        output = io.BytesIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
-        
-        st.download_button(
-            label="Download output CSV",
-            data=output,
-            file_name="output.csv",
-            mime="text/csv"
-        )
+            # Write the updated dataframe to a CSV file and provide a download link
+            output = io.BytesIO()
+            df.to_csv(output, index=False)
+            output.seek(0)
+            
+            st.download_button(
+                label="Download output CSV",
+                data=output,
+                file_name="output.csv",
+                mime="text/csv"
+            )
 
-        st.write("Search completed and results are ready to download.")
-
+            st.write("Search completed and results are ready to download.")
