@@ -33,7 +33,7 @@ st.button("Clear Form", on_click=clear_form)
 
 # Input fields for API key, CSE ID, and site
 api_key = st.text_input("Enter your Google API key:", key='api_key')
-cse_id = st.text_input("Enter your Custom Search Engine ID:", key='cse_id'))
+cse_id = st.text_input("Enter your Custom Search Engine ID:", key='cse_id')
 site = st.text_input("Enter the site (e.g., 'example.com'):", key='site')
 
 # Option to upload CSV or input manually
