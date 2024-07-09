@@ -49,7 +49,21 @@ def get_data(keyword, client, location_code, language_code, device, domain, num_
     }
     response = client.post("/v3/serp/google/organic/live/advanced", post_data)
     if response["status_code"] == 20000:
-        return response["tasks"][0]["result"][0]["items"]
+        try:
+            tasks = response.get("tasks", [])
+            if not tasks:
+                st.error(f"No tasks found in the response for keyword: {keyword}")
+                return []
+            
+            task_results = tasks[0].get("result", [])
+            if not task_results:
+                st.error(f"No results found in the task for keyword: {keyword}")
+                return []
+
+            return task_results[0].get("items", [])
+        except (IndexError, KeyError) as e:
+            st.error(f"Error processing response for keyword: {keyword}. Error: {str(e)}")
+            return []
     else:
         st.error("Error: " + response["status_message"])
         return []
