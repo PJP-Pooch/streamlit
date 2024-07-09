@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import json
 import io
+import streamlit_pivot_table as st_pivot
 
 # Function to search using Google Custom Search JSON API
 def search(query, api_key, cse_id, **kwargs):
@@ -84,3 +85,7 @@ if api_key and cse_id and site and keywords and target_urls:
             )
 
             st.write("Search completed and results are ready to download.")
+
+            # Display the results in a pivot table
+            st.write("Pivot Table of Results:")
+            st_pivot.pivot_ui(df)
