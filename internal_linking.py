@@ -23,7 +23,7 @@ def clear_form():
     st.session_state.site = ""
     st.session_state.keywords = ""
     st.session_state.target_urls = ""
-    st.session_state.uploaded_file = None
+    # st.session_state.uploaded_file = None
 
 # Streamlit app title
 st.title("Semantic Internal Linking Opportunities")
