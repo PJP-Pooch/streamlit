@@ -17,7 +17,7 @@ def search(query, api_key, cse_id, **kwargs):
     return json.loads(response.text)
 
 # Streamlit app title
-st.title("Google Custom Search Results")
+st.title("Semantic Internal Linking App")
 
 # Input fields for API key, CSE ID, and site
 api_key = st.text_input("Enter your Google API key:")
