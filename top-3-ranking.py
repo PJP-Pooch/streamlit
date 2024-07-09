@@ -80,6 +80,7 @@ st.title("SEO Data Analysis")
 username = st.text_input("API Username")
 password = st.text_input("API Password", type="password")
 domain = st.text_input("Domain")
+location = st.text_input("Location Code", value="2840")  # Example: 2840 for United Kingdom
 language = st.text_input("Language", value="English")  # Example: en for English
 device = st.selectbox("Device", ["desktop", "mobile"], index=1)
 num_results = st.number_input("Number of Results", min_value=1, max_value=10, value=3)
@@ -91,7 +92,7 @@ if st.button("Run Analysis"):
 
     for keyword in keywords:
         if keyword.strip():
-            data = get_data(keyword.strip(), client, language, device, domain, num_results)
+            data = get_data(keyword.strip(), client, location, language, device, domain, num_results)
             all_data.extend(data)
     
     if all_data:
