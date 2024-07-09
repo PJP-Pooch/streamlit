@@ -79,11 +79,11 @@ st.title("SEO Data Analysis")
 # User Inputs
 username = st.text_input("API Username")
 password = st.text_input("API Password", type="password")
-domain = st.text_input("Domain")
+domain = st.text_input("Domain", value="anya.health")
 location = st.text_input("Location Code", value="2840")  # Example: 2840 for United Kingdom
-language = st.text_input("Language", value="English")  # Example: en for English
+language = st.text_input("Language Code", value="en")  # Example: en for English
 device = st.selectbox("Device", ["desktop", "mobile"], index=1)
-num_results = st.number_input("Number of Results", min_value=1, max_value=10, value=3)
+num_results = st.number_input("Number of Results", min_value=1, value=3)
 keywords = st.text_area("Keywords (one per line)").split('\n')
 
 if st.button("Run Analysis"):
