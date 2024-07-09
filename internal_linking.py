@@ -25,7 +25,7 @@ cse_id = st.text_input("Enter your Custom Search Engine ID:")
 site = st.text_input("Enter the site (e.g., 'example.com'):")
 
 # File uploader
-st.subheader('Upload CSV, with 2 x columns "keyword", "target_page"')
+st.write('Upload CSV, with 2 x columns "keyword", "target_page"')
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
 
