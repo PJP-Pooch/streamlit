@@ -91,7 +91,7 @@ if st.button("Run Analysis"):
 
     for keyword in keywords:
         if keyword.strip():
-            data = get_data(keyword.strip(), client, location, language, device, domain, num_results)
+            data = get_data(keyword.strip(), client, language, device, domain, num_results)
             all_data.extend(data)
     
     if all_data:
