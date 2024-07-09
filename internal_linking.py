@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 import json
+from bs4 import BeautifulSoup
 import io
 
 # Function to search using Google Custom Search JSON API
@@ -54,4 +54,33 @@ if api_key and cse_id and site and keywords and target_urls:
             results = search(query, api_key, cse_id)
 
             # Extract the URLs of the search results
-            link_list = [result['link'] for result in results.get('
+            link_list = [result['link'] for result in results.get('items', [])]
+
+            # If less than 10 links are returned, fill the rest with None
+            while len(link_list) < 10:
+                link_list.append(None)
+
+            # Append the list of links to the results dataframe
+            results_df = pd.concat([results_df, pd.Series(link_list, name=index)], axis=1)
+
+        # Transpose the results dataframe and set column names
+        results_df = results_df.transpose()
+        results_df.columns = [f'link{i+1}' for i in range(10)]
+
+        # Concatenate the original dataframe with the results dataframe
+        df = pd.concat([df, results_df], axis=1)
+
+        # Write the updated dataframe to a CSV file and provide a download link
+        output = io.BytesIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
+        
+        st.download_button(
+            label="Download output CSV",
+            data=output,
+            file_name="output.csv",
+            mime="text/csv"
+        )
+
+        st.write("Search completed and results are ready to download.")
+
