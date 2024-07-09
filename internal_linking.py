@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-# from bs4 import BeautifulSoup
 import io
 
 # Function to search using Google Custom Search JSON API
@@ -18,7 +17,7 @@ def search(query, api_key, cse_id, **kwargs):
     return json.loads(response.text)
 
 # Streamlit app title
-st.title("Google Custom Search Results")
+st.title("Semantic Internal Linking Opportunities")
 
 # Input fields for API key, CSE ID, and site
 api_key = st.text_input("Enter your Google API key:")
@@ -27,6 +26,7 @@ site = st.text_input("Enter the site (e.g., 'example.com'):")
 
 # File uploader
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+st.text('# Assuming the columns are "keyword", "target_page"')
 
 if uploaded_file and api_key and cse_id and site:
     # Read the CSV file
