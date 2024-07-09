@@ -25,7 +25,7 @@ def clear_form():
     st.session_state.target_urls = ""
 
 # Streamlit app title
-st.title("Google Custom Search Results")
+st.title("Semantic Internal Linking Opportunities")
 
 # Button to clear form
 st.button("Clear Form", on_click=clear_form)
