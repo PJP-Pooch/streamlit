@@ -16,17 +16,28 @@ def search(query, api_key, cse_id, **kwargs):
     response = requests.get(url, params=params)
     return json.loads(response.text)
 
+# Function to clear input fields
+def clear_form():
+    st.session_state.api_key = ""
+    st.session_state.cse_id = ""
+    st.session_state.site = ""
+    st.session_state.keywords = ""
+    st.session_state.target_urls = ""
+
 # Streamlit app title
-st.title("Semantic Internal Linking App")
+st.title("Google Custom Search Results")
 
 # Input fields for API key, CSE ID, and site
-api_key = st.text_input("Enter your Google API key:")
-cse_id = st.text_input("Enter your Custom Search Engine ID:")
-site = st.text_input("Enter the site (e.g., 'example.com'):")
+api_key = st.text_input("Enter your Google API key:", key='api_key')
+cse_id = st.text_input("Enter your Custom Search Engine ID:", key='cse_id')
+site = st.text_input("Enter the site (e.g., 'example.com'):", key='site')
 
 # Input fields for keywords and target URLs
-keywords = st.text_area("Enter keywords (one per line):")
-target_urls = st.text_area("Enter corresponding target URLs (one per line):")
+keywords = st.text_area("Enter keywords (one per line):", key='keywords')
+target_urls = st.text_area("Enter corresponding target URLs (one per line):", key='target_urls')
+
+# Button to clear form
+st.button("Clear Form", on_click=clear_form)
 
 if api_key and cse_id and site and keywords and target_urls:
     # Split the input into lists
