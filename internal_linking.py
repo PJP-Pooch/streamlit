@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 import io
 
 # Function to search using Google Custom Search JSON API
