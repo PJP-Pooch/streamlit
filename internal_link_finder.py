@@ -1,88 +1,98 @@
 import streamlit as st
 import requests
+import xml.etree.ElementTree as ET
 import pandas as pd
-import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-import time
 
 # Streamlit App Title
-st.title("🔗 Internal Link Finder (Semantic SEO Tool)")
+st.title("🔗 Internal Link Finder (From XML Sitemap)")
 
-# Upload CSV file
-uploaded_file = st.file_uploader("Upload CSV file with URLs", type=["csv"])
+# User Input: XML Sitemap URL
+sitemap_url = st.text_input("Enter your XML Sitemap URL", "")
 
-# If file is uploaded, process it
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    urls = df["URL"].dropna().tolist()
+# Button to start processing
+if st.button("Find Internal Link Opportunities") and sitemap_url:
+
+    st.write("🔍 Fetching URLs from the sitemap...")
     
-    # Display the uploaded URLs
-    st.write("✅ Loaded", len(urls), "URLs")
+    # Step 1: Fetch all URLs from XML Sitemap
+    def get_sitemap_urls(sitemap_url):
+        """Fetch and parse URLs from XML sitemap, filtering out non-HTML pages."""
+        response = requests.get(sitemap_url)
+        soup = BeautifulSoup(response.content, "xml")  # Ensure correct XML parsing
+        urls = [loc.text for loc in soup.find_all("loc")]
 
-    # Button to start processing
-    if st.button("Find Internal Link Opportunities"):
-        st.write("🔍 Fetching content & analyzing link structure...")
+        # Filter out image URLs (e.g., Shopify CDN, PNG, JPG, etc.)
+        html_urls = [url for url in urls if not url.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"))]
+        
+        return html_urls
 
-        # Progress bar
-        progress_bar = st.progress(0)
+    urls = get_sitemap_urls(sitemap_url)
+    st.write("✅ Found", len(urls), "valid HTML pages in the sitemap.")
 
-        def get_page_content_and_links(url):
-            """Fetch page content and extract all internal links."""
-            try:
-                response = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-                if "text/html" not in response.headers.get("Content-Type", ""):
-                    return "", set()
+    # Progress bar
+    progress_bar = st.progress(0)
 
-                soup = BeautifulSoup(response.text, 'html.parser')
-
-                # Extract main content (all text within paragraphs)
-                content = ' '.join([p.text for p in soup.find_all('p')]).strip()
-
-                # Extract existing internal links
-                base_domain = urlparse(url).netloc
-                internal_links = {a['href'] for a in soup.find_all('a', href=True) if urlparse(a['href']).netloc == base_domain}
-
-                return content, internal_links
-            except:
+    # Step 2: Extract page content and existing internal links
+    def get_page_content_and_links(url):
+        """Fetch page content and extract all internal links."""
+        try:
+            response = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+            if "text/html" not in response.headers.get("Content-Type", ""):
                 return "", set()
 
-        # Step 1: Get page content and existing links
-        page_data = {url: get_page_content_and_links(url) for url in urls}
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Filter out empty pages
-        filtered_urls = [url for url, content in page_data.items() if content[0].strip()]
-        filtered_corpus = [page_data[url][0] for url in filtered_urls]
+            # Extract main content (all text within paragraphs)
+            content = ' '.join([p.text for p in soup.find_all('p')]).strip()
 
-        if len(filtered_corpus) < 2:
-            st.error("Not enough valid pages with content to compute similarity.")
-            st.stop()
+            # Extract existing internal links
+            base_domain = urlparse(url).netloc
+            internal_links = {a['href'] for a in soup.find_all('a', href=True) if urlparse(a['href']).netloc == base_domain}
 
-        # Step 2: Compute Similarity Scores for Content
-        vectorizer = TfidfVectorizer(stop_words='english')
-        X = vectorizer.fit_transform(filtered_corpus)
-        similarity_matrix = X @ X.T  # Corrected TF-IDF computation
+            return content, internal_links
+        except:
+            return "", set()
 
-        # Step 3: Identify Internal Link Opportunities
-        threshold = 0.15  # Adjust threshold for link relevance
-        internal_link_suggestions = []
+    st.write("🔍 Extracting content from pages...")
 
-        for i, source_url in enumerate(filtered_urls):
-            source_content, existing_links = page_data[source_url]
+    # Step 3: Get all valid pages and their content
+    page_data = {url: get_page_content_and_links(url) for url in urls}
 
-            for j, target_url in enumerate(filtered_urls):
-                if i != j and similarity_matrix[i, j] > threshold and target_url not in existing_links:
-                    internal_link_suggestions.append((source_url, target_url, similarity_matrix[i, j]))
+    # Filter out empty pages
+    filtered_urls = [url for url, content in page_data.items() if content[0].strip()]
+    filtered_corpus = [page_data[url][0] for url in filtered_urls]
 
-            # Update progress bar
-            progress_bar.progress((i + 1) / len(filtered_urls))
+    if len(filtered_corpus) < 2:
+        st.error("❌ Not enough valid pages with content to compute similarity.")
+        st.stop()
 
-        # Step 4: Display Results
-        results_df = pd.DataFrame(internal_link_suggestions, columns=["Source Page", "Suggested Internal Link", "Relevance Score"])
-        st.write("✅ Internal Link Suggestions:")
-        st.dataframe(results_df)
+    # Step 4: Compute Similarity Scores for Content
+    vectorizer = TfidfVectorizer(stop_words='english')
+    X = vectorizer.fit_transform(filtered_corpus)
+    similarity_matrix = X @ X.T  # TF-IDF cosine similarity computation
 
-        # Step 5: Downloadable CSV
-        csv_data = results_df.to_csv(index=False).encode("utf-8")
-        st.download_button("Download CSV", csv_data, "internal_link_suggestions.csv", "text/csv", key="download-csv")
+    # Step 5: Identify Internal Link Opportunities
+    threshold = 0.15  # Adjust threshold for link relevance
+    internal_link_suggestions = []
+
+    for i, source_url in enumerate(filtered_urls):
+        source_content, existing_links = page_data[source_url]
+
+        for j, target_url in enumerate(filtered_urls):
+            if i != j and similarity_matrix[i, j] > threshold and target_url not in existing_links:
+                internal_link_suggestions.append((source_url, target_url, similarity_matrix[i, j]))
+
+        # Update progress bar
+        progress_bar.progress((i + 1) / len(filtered_urls))
+
+    # Step 6: Display Results
+    results_df = pd.DataFrame(internal_link_suggestions, columns=["Source Page", "Suggested Internal Link", "Relevance Score"])
+    st.write("✅ Internal Link Suggestions:")
+    st.dataframe(results_df)
+
+    # Step 7: Downloadable CSV
+    csv_data = results_df.to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", csv_data, "internal_link_suggestions.csv", "text/csv", key="download-csv")
