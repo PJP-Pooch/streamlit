@@ -79,23 +79,36 @@ if uploaded_file and topic and openai_key:
     similarity_scores = cosine_similarity([topic_embedding], embeddings)[0]
     df["Similarity to Topic"] = similarity_scores
 
-    # Show least aligned
-    st.subheader("🚩 Least Aligned Articles")
-    st.dataframe(df.sort_values("Similarity to Topic").head(10)[["Title 1", "Address", "Similarity to Topic"]])
+    # Show most and least aligned side-by-side
+    st.subheader("📊 Most & Least Aligned Articles")
+    col1, col2 = st.columns(2)
 
-    # Show most aligned
-    st.subheader("✅ Most Aligned Articles")
-    st.dataframe(df.sort_values("Similarity to Topic", ascending=False).head(10)[["Title 1", "Address", "Similarity to Topic"]])
+    with col1:
+        st.markdown("### ✅ Most Aligned")
+        st.dataframe(df.sort_values("Similarity to Topic", ascending=False).head(10)[["Title 1", "Address", "Similarity to Topic"]])
 
-    # PCA projection
+    with col2:
+        st.markdown("### 🚩 Least Aligned")
+        st.dataframe(df.sort_values("Similarity to Topic").head(10)[["Title 1", "Address", "Similarity to Topic"]])
+
+    # PCA projection for top 10 closest and top 10 furthest
     pca = PCA(n_components=2)
     reduced = pca.fit_transform(embeddings)
     df["PCA_1"], df["PCA_2"] = reduced[:, 0], reduced[:, 1]
 
+    top_10 = df.sort_values("Similarity to Topic", ascending=False).head(10)
+    bottom_10 = df.sort_values("Similarity to Topic", ascending=True).head(10)
+
+    plot_df = pd.concat([top_10, bottom_10])
+
     # Plot
-    st.subheader("🗺️ Visual Map of Content Similarity")
+    st.subheader("🗺️ Visual Map of Topic & Top/Bottom 10 Articles")
     fig, ax = plt.subplots()
-    scatter = ax.scatter(df["PCA_1"], df["PCA_2"], c=df["Similarity to Topic"], cmap="viridis", alpha=0.8)
+    scatter = ax.scatter(plot_df["PCA_1"], plot_df["PCA_2"], c=plot_df["Similarity to Topic"], cmap="viridis", alpha=0.8)
+    for i, row in plot_df.iterrows():
+        ax.text(row["PCA_1"], row["PCA_2"], str(i), fontsize=6)
+    ax.scatter(0, 0, c="red", label="Core Topic")
+    ax.legend()
     plt.colorbar(scatter, label="Similarity to Topic")
     st.pyplot(fig)
 
