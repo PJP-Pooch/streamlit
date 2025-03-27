@@ -83,6 +83,10 @@ if uploaded_file and topic and openai_key:
     st.subheader("🚩 Least Aligned Articles")
     st.dataframe(df.sort_values("Similarity to Topic").head(10)[["Title 1", "Address", "Similarity to Topic"]])
 
+    # Show most aligned
+    st.subheader("✅ Most Aligned Articles")
+    st.dataframe(df.sort_values("Similarity to Topic", ascending=False).head(10)[["Title 1", "Address", "Similarity to Topic"]])
+
     # PCA projection
     pca = PCA(n_components=2)
     reduced = pca.fit_transform(embeddings)
