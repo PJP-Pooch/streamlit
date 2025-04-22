@@ -9,4 +9,4 @@ openai
 numpy
 matplotlib
 openai
-cv2
+opencv-python
