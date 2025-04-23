@@ -3,14 +3,17 @@ import searchconsole
 import pandas as pd
 import openai
 
-# Set OpenAI API Key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-
 st.title("🔍 GSC-Based Meta Tag Generator")
 st.markdown("""
 This app connects to your Google Search Console account, pulls top queries by URL,
 and uses OpenAI to generate SEO-optimized meta titles and descriptions.
 """)
+
+# Step 0: Get OpenAI API Key
+openai_api_key = st.text_input("Enter your OpenAI API Key", type="password")
+if not openai_api_key:
+    st.stop()
+openai.api_key = openai_api_key
 
 # Step 1: Authenticate GSC
 st.header("Step 1: Connect to Google Search Console")
