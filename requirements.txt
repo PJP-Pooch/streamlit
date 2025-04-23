@@ -1,4 +1,6 @@
 streamlit
+streamlit-elements
+streamlit-aggrid
 requests
 beautifulsoup4
 pandas
