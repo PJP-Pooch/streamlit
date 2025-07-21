@@ -43,14 +43,13 @@ def docx_to_html(doc):
             tag = "ul" if list_type == "ul" else "ol"
             html.append(f"<{tag}>")
             for item in list_buffer:
-                html.append(f"<li>{item}</li>")
-            html.append(f"</{tag}>")
+                html.append(f"  <li>{item}</li>")
+            html.append(f"</{tag}>\n")
         in_list = False
         list_buffer = []
 
     for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
+        if not para.text.strip():
             flush_list()
             continue
 
@@ -61,7 +60,7 @@ def docx_to_html(doc):
         if style in HEADING_STYLES:
             flush_list()
             tag = HEADING_STYLES[style]
-            html.append(f"<{tag}>{styled_text}</{tag}>")
+            html.append(f"<{tag}>{styled_text}</{tag}>\n")
             continue
 
         # Lists
@@ -71,10 +70,11 @@ def docx_to_html(doc):
             list_buffer.append(styled_text)
         else:
             flush_list()
-            html.append(f"<p>{styled_text}</p>")
+            html.append(f"<p>{styled_text}</p>\n")
 
     flush_list()
     return "\n".join(html)
+
 
 # --- Streamlit App ---
 st.set_page_config(page_title="DOCX to HTML with Inline Styles", layout="wide")
