@@ -1,106 +1,72 @@
+from docx import Document
 import streamlit as st
-import re
 
-st.set_page_config(page_title="Google Docs to HTML Cleaner", layout="wide")
-st.title("🧹 Google Docs to HTML Cleaner")
+# Define styles that map to headings
+HEADING_STYLES = {
+    "Title": "h1",
+    "Heading 1": "h1",
+    "Heading 2": "h2",
+    "Heading 3": "h3",
+    "Heading 4": "h4",
+    "Heading 5": "h5",
+    "Heading 6": "h6",
+}
 
-def plain_text_to_html(raw_text):
-    lines = raw_text.splitlines()
-    output = []
+def docx_to_html(doc):
+    html = []
     in_list = False
     list_type = None
-    list_items = []
+    list_buffer = []
 
     def flush_list():
-        nonlocal list_items, in_list, list_type
-        if list_items:
+        nonlocal in_list, list_buffer, list_type
+        if list_buffer:
             tag = "ul" if list_type == "ul" else "ol"
-            output.append(f"<{tag}>")
-            for item in list_items:
-                output.append(f"<li>{item}</li>")
-            output.append(f"</{tag}>")
-            list_items = []
-            in_list = False
-            list_type = None
+            html.append(f"<{tag}>")
+            for item in list_buffer:
+                html.append(f"<li>{item}</li>")
+            html.append(f"</{tag}>")
+        in_list = False
+        list_buffer = []
 
-    for line in lines:
-        line = line.strip()
-
-        if not line:
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
             flush_list()
             continue
 
-        if line.lower().startswith("title:"):
+        style = para.style.name
+
+        # Check for heading
+        if style in HEADING_STYLES:
             flush_list()
-            title = line.split(":", 1)[1].strip()
-            output.append(f"<h1>{title}</h1>")
-            continue
-        elif line.lower().startswith("meta title:") or line.lower().startswith("meta description:") or line.lower().startswith("status:"):
-            flush_list()
-            output.append(f"<!-- {line.strip()} -->")
-            continue
-        elif re.match(r"^heading \d:", line.lower()):
-            flush_list()
-            match = re.match(r"^heading (\d):(.+)", line, re.IGNORECASE)
-            if match:
-                level = match.group(1)
-                text = match.group(2).strip()
-                output.append(f"<h{level}>{text}</h{level}>")
-            continue
-        elif line == "[FIND OUT MORE]":
-            flush_list()
-            output.append('<p><a href="#" class="cta">FIND OUT MORE</a></p>')
-            continue
-        elif "[Related article:" in line:
-            flush_list()
-            related = re.findall(r"\[Related article: (.*?)\]", line)
-            if related:
-                output.append(f'<p><em>Related article: {related[0]}</em></p>')
-            continue
-        elif "[product-carousel" in line:
-            flush_list()
-            prod = re.findall(r"\[product-carousel (.*?)\]", line)
-            if prod:
-                output.append(f'<div class="product-carousel" data-id="{prod[0]}"></div>')
+            tag = HEADING_STYLES[style]
+            html.append(f"<{tag}>{text}</{tag}>")
             continue
 
-        if re.match(r"^[-*•]\s+", line):
-            item = re.sub(r"^[-*•]\s+", "", line)
-            if not in_list:
-                flush_list()
-                in_list = True
-                list_type = "ul"
-            list_items.append(item)
-            continue
-        elif re.match(r"^\d+\.\s+", line):
-            item = re.sub(r"^\d+\.\s+", "", line)
-            if not in_list:
-                flush_list()
-                in_list = True
-                list_type = "ol"
-            list_items.append(item)
-            continue
+        # Check for bullets and numbering
+        if para._element.xpath('.//w:numPr'):
+            list_type = "ol" if "Numbered" in style else "ul"
+            in_list = True
+            list_buffer.append(text)
         else:
             flush_list()
-            output.append(f"<p>{line}</p>")
+            html.append(f"<p>{text}</p>")
 
     flush_list()
-    return "\n".join(output)
+    return "\n".join(html)
 
-# --- UI ---
-uploaded_file = st.file_uploader("📄 Upload a .txt file from Google Docs", type=["txt"])
-pasted_text = st.text_area("Or paste text copied from Google Docs here:", height=300)
+# Streamlit interface
+st.set_page_config(page_title="DOCX to HTML Converter", layout="wide")
+st.title("📄 Convert .docx to Clean HTML")
+
+uploaded_file = st.file_uploader("Upload a .docx file", type=["docx"])
 
 if uploaded_file:
-    raw_text = uploaded_file.read().decode("utf-8")
-elif pasted_text:
-    raw_text = pasted_text
-else:
-    raw_text = ""
+    doc = Document(uploaded_file)
+    html_output = docx_to_html(doc)
 
-if raw_text:
-    cleaned_html = plain_text_to_html(raw_text)
-    st.markdown("### ✅ Cleaned HTML Preview")
-    st.code(cleaned_html, language="html")
+    st.markdown("### ✅ Cleaned HTML Output")
+    st.code(html_output, language="html")
 
-    st.download_button("⬇ Download HTML", cleaned_html, file_name="cleaned_output.html", mime="text/html")
+    st.download_button("⬇ Download HTML", html_output, file_name="converted.html", mime="text/html")
