@@ -1,7 +1,7 @@
 from docx import Document
+from docx.text.run import Run
 import streamlit as st
 
-# Define styles that map to headings
 HEADING_STYLES = {
     "Title": "h1",
     "Heading 1": "h1",
@@ -11,6 +11,25 @@ HEADING_STYLES = {
     "Heading 5": "h5",
     "Heading 6": "h6",
 }
+
+def format_run(run: Run) -> str:
+    """Return HTML string for a styled text run."""
+    text = run.text
+    if not text:
+        return ""
+
+    if run.bold and run.italic:
+        return f"<strong><em>{text}</em></strong>"
+    elif run.bold:
+        return f"<strong>{text}</strong>"
+    elif run.italic:
+        return f"<em>{text}</em>"
+    else:
+        return text
+
+def format_paragraph(paragraph) -> str:
+    """Handle inline formatting inside a paragraph."""
+    return ''.join([format_run(run) for run in paragraph.runs])
 
 def docx_to_html(doc):
     html = []
@@ -35,30 +54,31 @@ def docx_to_html(doc):
             flush_list()
             continue
 
+        styled_text = format_paragraph(para)
         style = para.style.name
 
-        # Check for heading
+        # Headings
         if style in HEADING_STYLES:
             flush_list()
             tag = HEADING_STYLES[style]
-            html.append(f"<{tag}>{text}</{tag}>")
+            html.append(f"<{tag}>{styled_text}</{tag}>")
             continue
 
-        # Check for bullets and numbering
+        # Lists
         if para._element.xpath('.//w:numPr'):
             list_type = "ol" if "Numbered" in style else "ul"
             in_list = True
-            list_buffer.append(text)
+            list_buffer.append(styled_text)
         else:
             flush_list()
-            html.append(f"<p>{text}</p>")
+            html.append(f"<p>{styled_text}</p>")
 
     flush_list()
     return "\n".join(html)
 
-# Streamlit interface
-st.set_page_config(page_title="DOCX to HTML Converter", layout="wide")
-st.title("📄 Convert .docx to Clean HTML")
+# --- Streamlit App ---
+st.set_page_config(page_title="DOCX to HTML with Inline Styles", layout="wide")
+st.title("📄 .docx to HTML Converter (with Bold/Italic)")
 
 uploaded_file = st.file_uploader("Upload a .docx file", type=["docx"])
 
