@@ -96,8 +96,8 @@ def docx_to_html(doc):
 
 
 # --- Streamlit App ---
-st.set_page_config(page_title="DOCX to HTML with Inline Styles", layout="wide")
-st.title("📄 .docx to HTML Converter (with Bold/Italic)")
+st.set_page_config(page_title="DOCX to HTML", layout="wide")
+st.title("📄 .docx to HTML Converter")
 
 uploaded_file = st.file_uploader("Upload a .docx file", type=["docx"])
 
