@@ -27,9 +27,27 @@ def format_run(run: Run) -> str:
     else:
         return text
 
-def format_paragraph(paragraph) -> str:
+def format_paragraph(paragraph, strip_bold=False) -> str:
     """Handle inline formatting inside a paragraph."""
-    return ''.join([format_run(run) for run in paragraph.runs])
+    parts = []
+    for run in paragraph.runs:
+        text = run.text
+        if not text:
+            continue
+        if strip_bold and run.bold and run.italic:
+            parts.append(f"<em>{text}</em>")
+        elif strip_bold and run.bold:
+            parts.append(text)  # strip <strong>
+        elif run.bold and run.italic:
+            parts.append(f"<strong><em>{text}</em></strong>")
+        elif run.bold:
+            parts.append(f"<strong>{text}</strong>")
+        elif run.italic:
+            parts.append(f"<em>{text}</em>")
+        else:
+            parts.append(text)
+    return ''.join(parts)
+
 
 def docx_to_html(doc):
     html = []
@@ -53,17 +71,17 @@ def docx_to_html(doc):
             flush_list()
             continue
 
-        styled_text = format_paragraph(para)
         style = para.style.name
+        is_heading = style in HEADING_STYLES
+        strip_bold = is_heading
+        styled_text = format_paragraph(para, strip_bold=strip_bold)
 
-        # Headings
-        if style in HEADING_STYLES:
+        if is_heading:
             flush_list()
             tag = HEADING_STYLES[style]
             html.append(f"<{tag}>{styled_text}</{tag}>\n")
             continue
 
-        # Lists
         if para._element.xpath('.//w:numPr'):
             list_type = "ol" if "Numbered" in style else "ul"
             in_list = True
@@ -74,6 +92,7 @@ def docx_to_html(doc):
 
     flush_list()
     return "\n".join(html)
+
 
 
 # --- Streamlit App ---
