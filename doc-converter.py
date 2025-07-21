@@ -87,6 +87,8 @@ if uploaded_file:
     html_output = docx_to_html(doc)
 
     st.markdown("### ✅ Cleaned HTML Output")
-    st.code(html_output, language="html")
+    styled_output = f"""<div style="line-height: 1.6; font-size: 1rem;">{html_output}</div>"""
 
-    st.download_button("⬇ Download HTML", html_output, file_name="converted.html", mime="text/html")
+    st.code(styled_output, language="html")
+
+    st.download_button("⬇ Download HTML", styled_output, file_name="converted.html", mime="text/html")
