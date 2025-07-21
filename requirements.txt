@@ -5,6 +5,7 @@ requests
 beautifulsoup4
 pandas
 scikit-learn
+python-docx streamlit
 nltk
 lxml
 openai
