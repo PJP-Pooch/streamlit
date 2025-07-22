@@ -27,26 +27,33 @@ def format_run(run: Run) -> str:
     else:
         return text
 
-def format_paragraph(paragraph, strip_bold=False) -> str:
-    """Handle inline formatting inside a paragraph."""
-    parts = []
+def format_paragraph(paragraph, strip_bold=False):
+    html_parts = []
+
     for run in paragraph.runs:
         text = run.text
         if not text:
             continue
         if strip_bold and run.bold and run.italic:
-            parts.append(f"<em>{text}</em>")
+            part = f"<em>{text}</em>"
         elif strip_bold and run.bold:
-            parts.append(text)  # strip <strong>
+            part = text  # no <strong> in headings
         elif run.bold and run.italic:
-            parts.append(f"<strong><em>{text}</em></strong>")
+            part = f"<strong><em>{text}</em></strong>"
         elif run.bold:
-            parts.append(f"<strong>{text}</strong>")
+            part = f"<strong>{text}</strong>"
         elif run.italic:
-            parts.append(f"<em>{text}</em>")
+            part = f"<em>{text}</em>"
         else:
-            parts.append(text)
-    return ''.join(parts)
+            part = text
+        html_parts.append(part)
+
+        # Handle soft line breaks (Shift+Enter)
+        if run._element.xpath(".//w:br"):
+            html_parts.append("<br>")
+
+    return ''.join(html_parts)
+
 
 
 def docx_to_html(doc):
