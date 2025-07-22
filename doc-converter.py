@@ -28,16 +28,21 @@ def format_run(run: Run) -> str:
         return text
 
 def format_paragraph(paragraph, strip_bold=False):
-    html_parts = []
+    """Handle inline formatting inside a paragraph and detect <w:br> soft breaks."""
+    parts = []
 
     for run in paragraph.runs:
-        text = run.text
-        if not text:
+        xml = run._element
+        text = run.text or ""
+
+        if not text and not xml.xpath(".//w:br"):
             continue
+
+        # Format text based on style
         if strip_bold and run.bold and run.italic:
             part = f"<em>{text}</em>"
         elif strip_bold and run.bold:
-            part = text  # no <strong> in headings
+            part = text  # omit <strong> in headings
         elif run.bold and run.italic:
             part = f"<strong><em>{text}</em></strong>"
         elif run.bold:
@@ -46,13 +51,15 @@ def format_paragraph(paragraph, strip_bold=False):
             part = f"<em>{text}</em>"
         else:
             part = text
-        html_parts.append(part)
 
-        # Handle soft line breaks (Shift+Enter)
-        if run._element.xpath(".//w:br"):
-            html_parts.append("<br>")
+        parts.append(part)
 
-    return ''.join(html_parts)
+        # Check for soft line break
+        if xml.xpath(".//w:br"):
+            parts.append("<br>")
+
+    return ''.join(parts)
+
 
 
 
