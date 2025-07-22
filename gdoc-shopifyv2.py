@@ -135,5 +135,16 @@ if uploaded_file:
 
     st.markdown("### 🌐 Live Preview")
     st.components.v1.html(f"""
-    <div style='font-family: sans-serif; line-height: 1.6;'>{html_output}</div>
-    """, height=600, scrolling=True)
+<div style='
+  font-family: sans-serif; 
+  line-height: 1.6; 
+  background-color: white; 
+  color: black; 
+  padding: 2rem; 
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+'>
+{html_output}
+</div>
+""", height=600, scrolling=True)
+
