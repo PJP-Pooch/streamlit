@@ -1,6 +1,5 @@
-from docx import Document
-from docx.text.run import Run
 import streamlit as st
+from docx import Document
 
 HEADING_STYLES = {
     "Title": "h1",
@@ -12,37 +11,23 @@ HEADING_STYLES = {
     "Heading 6": "h6",
 }
 
-def format_run(run: Run) -> str:
-    """Return HTML string for a styled text run."""
-    text = run.text
-    if not text:
-        return ""
-
-    if run.bold and run.italic:
-        return f"<strong><em>{text}</em></strong>"
-    elif run.bold:
-        return f"<strong>{text}</strong>"
-    elif run.italic:
-        return f"<em>{text}</em>"
-    else:
-        return text
-
 def format_paragraph(paragraph, strip_bold=False):
-    """Handle inline formatting inside a paragraph and detect <w:br> soft breaks."""
-    parts = []
+    """Split paragraph into chunks on <w:br> (manual line breaks)."""
+    chunks = []
+    current = []
 
     for run in paragraph.runs:
-        xml = run._element
         text = run.text or ""
+        xml = run._element
 
         if not text and not xml.xpath(".//w:br"):
             continue
 
-        # Format text based on style
+        # Format inline styles
         if strip_bold and run.bold and run.italic:
             part = f"<em>{text}</em>"
         elif strip_bold and run.bold:
-            part = text  # omit <strong> in headings
+            part = text
         elif run.bold and run.italic:
             part = f"<strong><em>{text}</em></strong>"
         elif run.bold:
@@ -52,16 +37,17 @@ def format_paragraph(paragraph, strip_bold=False):
         else:
             part = text
 
-        parts.append(part)
+        current.append(part)
 
-        # Check for soft line break
+        # Detect line break and start new chunk
         if xml.xpath(".//w:br"):
-            parts.append("<br>")
+            chunks.append(''.join(current).strip())
+            current = []
 
-    return ''.join(parts)
+    if current:
+        chunks.append(''.join(current).strip())
 
-
-
+    return chunks
 
 def docx_to_html(doc):
     html = []
@@ -88,30 +74,30 @@ def docx_to_html(doc):
         style = para.style.name
         is_heading = style in HEADING_STYLES
         strip_bold = is_heading
-        styled_text = format_paragraph(para, strip_bold=strip_bold)
+        chunks = format_paragraph(para, strip_bold=strip_bold)
 
         if is_heading:
             flush_list()
             tag = HEADING_STYLES[style]
-            html.append(f"<{tag}>{styled_text}</{tag}>\n")
+            for chunk in chunks:
+                html.append(f"<{tag}>{chunk}</{tag}>\n")
             continue
 
         if para._element.xpath('.//w:numPr'):
             list_type = "ol" if "Numbered" in style else "ul"
             in_list = True
-            list_buffer.append(styled_text)
+            list_buffer.extend(chunks)
         else:
             flush_list()
-            html.append(f"<p>{styled_text}</p>\n")
+            for chunk in chunks:
+                html.append(f"<p>{chunk}</p>\n")
 
     flush_list()
-    return "\n".join(html)
-
-
+    return '\n'.join(html)
 
 # --- Streamlit App ---
-st.set_page_config(page_title="DOCX to HTML", layout="wide")
-st.title("📄 .docx to HTML Converter")
+st.set_page_config(page_title="DOCX to Clean HTML", layout="wide")
+st.title("📄 .docx to Clean HTML Converter")
 
 uploaded_file = st.file_uploader("Upload a .docx file", type=["docx"])
 
@@ -120,7 +106,6 @@ if uploaded_file:
     html_output = docx_to_html(doc)
 
     st.markdown("### ✅ Cleaned HTML Output")
-
     st.code(html_output, language="html")
 
     st.download_button("⬇ Download HTML", html_output, file_name="converted.html", mime="text/html")
