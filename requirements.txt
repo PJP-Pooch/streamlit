@@ -1,9 +1,7 @@
 streamlit
-streamlit-elements==0.0.2
 streamlit-aggrid
 requests
 beautifulsoup4
-pandas
 scikit-learn
 python-docx
 nltk
@@ -14,3 +12,10 @@ matplotlib
 openai
 opencv-python-headless
 searchconsole
+google_auth_oauthlib==1.2.0
+google-api-python-client==2.111.0
+searchconsole==0.0.4
+pandas==2.1.4
+streamlit-elements==0.0.2
+plotly==6.3.0
+
