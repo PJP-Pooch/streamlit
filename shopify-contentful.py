@@ -1,6 +1,8 @@
 import re
+import json
 import streamlit as st
 from bs4 import BeautifulSoup
+import streamlit.components.v1 as components
 
 HTML_PARSER = "html5lib"
 SHORTCODE_PATTERNS = ("[table=", "[highlight-block=", "[cta=")
@@ -171,7 +173,7 @@ st.markdown(
     """
 1. Paste the **Shopify blog HTML** on the left  
 2. Click **Clean HTML** using the buttons at the top  
-3. Copy the **cleaned HTML** from the code box (use the copy icon)  
+3. Click **Copy rendered content** above the preview  
 4. Paste into your **Contentful Rich Text** field  
 
 Bold, italics, underline, headings, lists, iframes & shortcodes will be preserved.  
@@ -179,6 +181,7 @@ Images show as `[IMAGE: ...]` so you can re-add them as Contentful assets.
 """
 )
 
+# Session state
 if "cleaned_html" not in st.session_state:
     st.session_state.cleaned_html = ""
 if "raw_html" not in st.session_state:
@@ -194,31 +197,23 @@ def clear_all():
     st.session_state.cleaned_html = ""
 
 
-# ---- TOP ACTION BUTTONS (always visible near top) -------------------------------
-action_col1, action_col2 = st.columns([1, 1])
-with action_col1:
+# ---- TOP ACTION BUTTONS --------------------------------------------------------
+btn_col1, btn_col2 = st.columns([1, 1])
+with btn_col1:
     st.button("🔄 Clean HTML", type="primary", on_click=run_clean)
-with action_col2:
+with btn_col2:
     st.button("🧹 Clear input & output", on_click=clear_all)
 
 
-# ---- OPTIONAL: DEDICATED COPY-FRIENDLY CODE BLOCK ------------------------------
-if st.session_state.cleaned_html:
-    st.subheader("✅ Cleaned HTML (copy from here)")
-    st.caption("Use the copy icon in the top-right of this box to copy only the cleaned HTML.")
-    st.code(st.session_state.cleaned_html, language="html")
-
-
-# ---- MAIN LAYOUT: INPUT (LEFT) & RENDERED PREVIEW (RIGHT) ----------------------
+# ---- LAYOUT: INPUT (LEFT) & PREVIEW (RIGHT) ------------------------------------
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("1️⃣ Raw Shopify HTML")
 
-    st.session_state.raw_html = st.text_area(
+    st.text_area(
         "Paste HTML here",
-        value=st.session_state.raw_html,
-        key="raw_html_input",
+        key="raw_html",
         height=550,
         placeholder="Paste the blog HTML / DOM snippet from Shopify…",
     )
@@ -226,12 +221,47 @@ with col1:
 with col2:
     st.subheader("2️⃣ Cleaned preview (rendered)")
 
+    # Copy rendered content button (uses cleaned HTML as HTML clipboard)
     if st.session_state.cleaned_html:
+        copy_button_html = f"""
+        <button id="copy-rendered-btn" style="margin-bottom: 0.5rem;">
+          📋 Copy rendered content
+        </button>
+        <script>
+        const htmlContent = {json.dumps(st.session_state.cleaned_html)};
+        const btn = document.getElementById('copy-rendered-btn');
+
+        if (btn) {{
+          btn.addEventListener('click', async () => {{
+            try {{
+              if (navigator.clipboard && window.ClipboardItem) {{
+                const blob = new Blob([htmlContent], {{ type: "text/html" }});
+                const item = new ClipboardItem({{"text/html": blob}});
+                await navigator.clipboard.write([item]);
+              }} else {{
+                // Fallback: plain text copy
+                await navigator.clipboard.writeText(htmlContent);
+              }}
+              btn.innerText = "✅ Copied!";
+              setTimeout(() => {{
+                btn.innerText = "📋 Copy rendered content";
+              }}, 1500);
+            }} catch (err) {{
+              console.error(err);
+              alert("Copy failed, please click in the preview and use Ctrl+A / Ctrl+C.");
+            }}
+          }});
+        }}
+        </script>
+        """
+        components.html(copy_button_html, height=50)
+
         st.caption(
             "This is the cleaned HTML rendered as rich text so you can visually check headings, "
-            "lists, links, iframes, and shortcodes. "
-            "For copying, use the **Cleaned HTML** code box above."
+            "lists, links, iframes, and shortcodes.\n\n"
+            "Use **Copy rendered content** above. If that fails, click here and press **Ctrl+A**, then **Ctrl+C**."
         )
+
         st.markdown(
             f'<div id="clean-preview">{st.session_state.cleaned_html}</div>',
             unsafe_allow_html=True,
