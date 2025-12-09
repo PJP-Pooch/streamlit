@@ -201,8 +201,8 @@ def clear_all():
 btn_col, _ = st.columns([0.3, 0.7])
 
 with btn_col:
-    st.button("🔄 Clean HTML", on_click=run_clean, use_container_width=True)
-    st.button("🧹 Clear input & output", on_click=clear_all, use_container_width=True)
+    st.button("🔄 Clean HTML", on_click=run_clean, use_container_width=False)
+    st.button("🧹 Clear input & output", on_click=clear_all, use_container_width=False)
 
 
 # ---- LAYOUT: INPUT (LEFT) & PREVIEW (RIGHT) ------------------------------------
