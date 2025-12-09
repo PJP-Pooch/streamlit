@@ -171,7 +171,8 @@ st.markdown(
     """
 1. Paste the **Shopify blog HTML** on the left  
 2. Click **Clean HTML**  
-3. Click **Copy cleaned HTML** on the right, then paste into your **Contentful Rich Text** field  
+3. On the right, click inside the preview, press **Ctrl+A** then **Ctrl+C**,  
+   and paste into your **Contentful Rich Text** field  
 
 Bold, italics, underline, headings, lists, iframes & shortcodes will be preserved.  
 Images show as `[IMAGE: ...]` so you can re-add them as Contentful assets.
@@ -197,63 +198,17 @@ with col1:
         st.session_state.cleaned_html = clean_html(st.session_state.raw_html)
 
 with col2:
-    st.subheader("2️⃣ Cleaned preview & copy")
+    st.subheader("2️⃣ Cleaned preview")
 
     if st.session_state.cleaned_html:
-        preview_id = "clean-preview"
-
-        # Copy button RIGHT AT THE TOP of the preview column
-        copy_button_html = f"""
-        <button
-            style="
-                background-color:#4F46E5;
-                color:white;
-                border:none;
-                padding:0.5rem 1rem;
-                border-radius:0.5rem;
-                cursor:pointer;
-                margin-bottom:0.75rem;
-            "
-            onclick="
-                var el = document.getElementById('{preview_id}');
-                if (!el) return;
-                var html = el.innerHTML;
-                if (navigator.clipboard && navigator.clipboard.writeText) {{
-                    navigator.clipboard.writeText(html).then(function() {{
-                        alert('Clean HTML copied to clipboard!');
-                    }}).catch(function(err) {{
-                        console.error(err);
-                        alert('Could not copy automatically. Please select the text and copy manually.');
-                    }});
-                }} else {{
-                    var range = document.createRange();
-                    range.selectNodeContents(el);
-                    var sel = window.getSelection();
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                    document.execCommand('copy');
-                    alert('Clean HTML copied to clipboard!');
-                }}
-            "
-        >
-            Copy cleaned HTML
-        </button>
-        """
-
-        # Render the copy button (as actual HTML, not text!)
-        st.markdown(copy_button_html, unsafe_allow_html=True)
-
         st.caption(
-            "Below is the cleaned HTML rendered as rich text. "
-            "If the copy button doesn’t work in your browser, "
-            "click in this area, press **Ctrl+A** then **Ctrl+C**, and paste into Contentful."
+            "This is the cleaned HTML rendered as rich text. "
+            "To copy: click anywhere in this area, press **Ctrl+A**, then **Ctrl+C**, "
+            "and paste into the Contentful Rich Text field."
         )
-
-        # The preview itself
         st.markdown(
-            f'<div id="{preview_id}">{st.session_state.cleaned_html}</div>',
+            f'<div id="clean-preview">{st.session_state.cleaned_html}</div>',
             unsafe_allow_html=True,
         )
-
     else:
         st.info("Paste HTML on the left and click **Clean HTML** to see the result here.")
