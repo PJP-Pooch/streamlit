@@ -170,9 +170,9 @@ st.title("Shopify → Contentful Blog Cleaner")
 st.markdown(
     """
 1. Paste the **Shopify blog HTML** on the left  
-2. Click **Clean HTML**  
-3. On the right, click inside the preview, press **Ctrl+A** then **Ctrl+C**,  
-   and paste into your **Contentful Rich Text** field  
+2. Click **Clean HTML** using the buttons at the top  
+3. Copy the **cleaned HTML** from the code box (use the copy icon)  
+4. Paste into your **Contentful Rich Text** field  
 
 Bold, italics, underline, headings, lists, iframes & shortcodes will be preserved.  
 Images show as `[IMAGE: ...]` so you can re-add them as Contentful assets.
@@ -181,34 +181,60 @@ Images show as `[IMAGE: ...]` so you can re-add them as Contentful assets.
 
 if "cleaned_html" not in st.session_state:
     st.session_state.cleaned_html = ""
+if "raw_html" not in st.session_state:
+    st.session_state.raw_html = ""
 
+
+def run_clean():
+    st.session_state.cleaned_html = clean_html(st.session_state.raw_html)
+
+
+def clear_all():
+    st.session_state.raw_html = ""
+    st.session_state.cleaned_html = ""
+
+
+# ---- TOP ACTION BUTTONS (always visible near top) -------------------------------
+action_col1, action_col2 = st.columns([1, 1])
+with action_col1:
+    st.button("🔄 Clean HTML", type="primary", on_click=run_clean)
+with action_col2:
+    st.button("🧹 Clear input & output", on_click=clear_all)
+
+
+# ---- OPTIONAL: DEDICATED COPY-FRIENDLY CODE BLOCK ------------------------------
+if st.session_state.cleaned_html:
+    st.subheader("✅ Cleaned HTML (copy from here)")
+    st.caption("Use the copy icon in the top-right of this box to copy only the cleaned HTML.")
+    st.code(st.session_state.cleaned_html, language="html")
+
+
+# ---- MAIN LAYOUT: INPUT (LEFT) & RENDERED PREVIEW (RIGHT) ----------------------
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("1️⃣ Raw Shopify HTML")
 
-    raw_html = st.text_area(
+    st.session_state.raw_html = st.text_area(
         "Paste HTML here",
-        key="raw_html",
+        value=st.session_state.raw_html,
+        key="raw_html_input",
         height=550,
         placeholder="Paste the blog HTML / DOM snippet from Shopify…",
     )
 
-    if st.button("Clean HTML"):
-        st.session_state.cleaned_html = clean_html(st.session_state.raw_html)
-
 with col2:
-    st.subheader("2️⃣ Cleaned preview")
+    st.subheader("2️⃣ Cleaned preview (rendered)")
 
     if st.session_state.cleaned_html:
         st.caption(
-            "This is the cleaned HTML rendered as rich text. "
-            "To copy: click anywhere in this area, press **Ctrl+A**, then **Ctrl+C**, "
-            "and paste into the Contentful Rich Text field."
+            "This is the cleaned HTML rendered as rich text so you can visually check headings, "
+            "lists, links, iframes, and shortcodes. "
+            "For copying, use the **Cleaned HTML** code box above."
         )
         st.markdown(
             f'<div id="clean-preview">{st.session_state.cleaned_html}</div>',
             unsafe_allow_html=True,
         )
     else:
-        st.info("Paste HTML on the left and click **Clean HTML** to see the result here.")
+        st.info("Paste HTML on the left and click **Clean HTML** at the top to see the result here.")
