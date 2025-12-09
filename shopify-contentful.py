@@ -28,11 +28,7 @@ def clean_html(raw_html: str) -> str:
 
     soup = BeautifulSoup(raw_html, HTML_PARSER)
 
-    # 0) Preserve iframes (YouTube/Vimeo) exactly as they are
-    #    (we don't touch them anywhere else, just avoid removing attributes unnecessarily)
-    #    Nothing to do here explicitly, just DON'T decompose or unwrap them later.
-
-    # 1) Replace <img> tags with readable placeholders so you can re-add them in Contentful
+    # ---- IMAGES -> PLACEHOLDERS -------------------------------------------------
     for img in soup.find_all("img"):
         alt = img.get("alt") or ""
         src = img.get("src") or ""
@@ -46,11 +42,7 @@ def clean_html(raw_html: str) -> str:
 
         img.replace_with(soup.new_string(placeholder_text))
 
-    # 2) Handle <span>:
-    #    - bold:   font-weight:700/bold  -> <strong>
-    #    - italic: font-style:italic     -> <em>
-    #    - underline: text-decoration:underline -> <u>
-    #    - everything else: unwrap to plain text
+    # ---- SPANS -> STRONG / EM / U OR PLAIN --------------------------------------
     for span in list(soup.find_all("span")):
         style = span.get("style", "").lower()
 
@@ -66,34 +58,29 @@ def clean_html(raw_html: str) -> str:
         else:
             span.unwrap()
 
-    # 3) Replace <br> with a single space so they don't fragment sentences
+    # ---- <br> -> SPACE ----------------------------------------------------------
     for br in soup.find_all("br"):
         br.replace_with(" ")
 
-    # 4) Clean paragraphs but DO NOT destroy nested markup (<strong>, <em>, <u>, links etc.)
+    # ---- PARAGRAPHS -------------------------------------------------------------
     for p in list(soup.find_all("p")):
         text = p.get_text(" ", strip=True)
 
-        # Remove empty paragraphs
         if is_empty_or_nbsp(text):
             p.decompose()
             continue
 
-        # Shortcode paragraphs: just normalise whitespace and keep as plain text
+        # Shortcodes: keep as plain one-line text
         if any(pattern in text for pattern in SHORTCODE_PATTERNS):
             p.clear()
             p.string = re.sub(r"\s+", " ", text)
             continue
 
-        # For normal paragraphs we *don't* clear children, to keep <strong>/<em>/<u>/links
-        # We only collapse excessive whitespace between words in text nodes.
-        # Easiest safe approach: normalise the innerHTML string, then re-parse it.
         inner_html = p.decode_contents()
         normalized_inner = re.sub(r"\s+", " ", inner_html).strip()
         new_children = BeautifulSoup(normalized_inner, HTML_PARSER)
 
         p.clear()
-        # new_children.body may exist if parser wraps; otherwise use new_children directly
         if new_children.body:
             for child in list(new_children.body.contents):
                 p.append(child)
@@ -101,9 +88,7 @@ def clean_html(raw_html: str) -> str:
             for child in list(new_children.contents):
                 p.append(child)
 
-    # 5) Normalise list items:
-    #    - unwrap <p> inside <li>
-    #    - keep inline formatting (<strong>, <em>, <u>, links)
+    # ---- LIST ITEMS -------------------------------------------------------------
     for li in list(soup.find_all("li")):
         text = li.get_text(" ", strip=True)
         if is_empty_or_nbsp(text):
@@ -127,7 +112,7 @@ def clean_html(raw_html: str) -> str:
             for child in list(new_children.contents):
                 li.append(child)
 
-    # 6) Headings: just normalise whitespace but keep tags & inline markup
+    # ---- HEADINGS ---------------------------------------------------------------
     for level in ["h1", "h2", "h3", "h4", "h5", "h6"]:
         for h in list(soup.find_all(level)):
             text = h.get_text(" ", strip=True)
@@ -147,10 +132,7 @@ def clean_html(raw_html: str) -> str:
                 for child in list(new_children.contents):
                     h.append(child)
 
-    # 7) Strip non-essential attributes everywhere EXCEPT:
-    #    - href (links)
-    #    - src  (for iframes, videos, etc.)
-    #    - allow / allowfullscreen / frameborder etc for iframes
+    # ---- ATTRIBUTES (keep link + iframe attrs) ----------------------------------
     iframe_safe_attrs = {
         "src",
         "width",
@@ -164,7 +146,6 @@ def clean_html(raw_html: str) -> str:
     }
 
     for tag in soup.find_all(True):
-        # leave iframe attributes mostly intact
         if tag.name == "iframe":
             for attr in list(tag.attrs.keys()):
                 if attr not in iframe_safe_attrs:
@@ -175,7 +156,6 @@ def clean_html(raw_html: str) -> str:
             if attr not in ("href", "src"):
                 del tag.attrs[attr]
 
-    # Return the inner HTML of <body> if present; else the whole soup
     if soup.body:
         return soup.body.decode_contents()
     return str(soup)
@@ -191,12 +171,13 @@ st.markdown(
     """
 1. Paste the **Shopify blog HTML** on the left  
 2. Click **Clean HTML**  
-3. Use the **Copy** button or select the preview on the right and paste into your **Contentful Rich Text** field  
-   (bold, italics, underline, lists, headings, iframes & shortcodes will be preserved; images show as `[IMAGE: ...]`).
+3. Click **Copy cleaned HTML** on the right, then paste into your **Contentful Rich Text** field  
+
+Bold, italics, underline, headings, lists, iframes & shortcodes will be preserved.  
+Images show as `[IMAGE: ...]` so you can re-add them as Contentful assets.
 """
 )
 
-# state for cleaned HTML so it survives reruns
 if "cleaned_html" not in st.session_state:
     st.session_state.cleaned_html = ""
 
@@ -216,43 +197,38 @@ with col1:
         st.session_state.cleaned_html = clean_html(st.session_state.raw_html)
 
 with col2:
-    st.subheader("2️⃣ Cleaned preview (copy into Contentful)")
+    st.subheader("2️⃣ Cleaned preview & copy")
 
     if st.session_state.cleaned_html:
-        st.caption(
-            "This is the cleaned HTML rendered as rich text.\n\n"
-            "You can either:\n"
-            "- Click **Copy cleaned HTML** below, then paste into the Contentful Rich Text field, or\n"
-            "- Click anywhere in this preview, press **Ctrl+A** then **Ctrl+C**, and paste."
-        )
-
-        # Preview wrapped in a div with an id so JS can grab it
         preview_id = "clean-preview"
 
-        st.markdown(
-            f'<div id="{preview_id}">{st.session_state.cleaned_html}</div>',
-            unsafe_allow_html=True,
-        )
-
-        # Copy button using JS – copies the innerHTML of the preview div
-        copy_button_js = f"""
+        # Copy button RIGHT AT THE TOP of the preview column
+        copy_button_html = f"""
         <button
+            style="
+                background-color:#4F46E5;
+                color:white;
+                border:none;
+                padding:0.5rem 1rem;
+                border-radius:0.5rem;
+                cursor:pointer;
+                margin-bottom:0.75rem;
+            "
             onclick="
-                const el = document.getElementById('{preview_id}');
+                var el = document.getElementById('{preview_id}');
                 if (!el) return;
-                const html = el.innerHTML;
+                var html = el.innerHTML;
                 if (navigator.clipboard && navigator.clipboard.writeText) {{
-                    navigator.clipboard.writeText(html).then(() => {{
+                    navigator.clipboard.writeText(html).then(function() {{
                         alert('Clean HTML copied to clipboard!');
-                    }}).catch(err => {{
+                    }}).catch(function(err) {{
                         console.error(err);
                         alert('Could not copy automatically. Please select the text and copy manually.');
                     }});
                 }} else {{
-                    // Fallback for older browsers
-                    const range = document.createRange();
+                    var range = document.createRange();
                     range.selectNodeContents(el);
-                    const sel = window.getSelection();
+                    var sel = window.getSelection();
                     sel.removeAllRanges();
                     sel.addRange(range);
                     document.execCommand('copy');
@@ -264,6 +240,20 @@ with col2:
         </button>
         """
 
-        st.markdown(copy_button_js, unsafe_allow_html=True)
+        # Render the copy button (as actual HTML, not text!)
+        st.markdown(copy_button_html, unsafe_allow_html=True)
+
+        st.caption(
+            "Below is the cleaned HTML rendered as rich text. "
+            "If the copy button doesn’t work in your browser, "
+            "click in this area, press **Ctrl+A** then **Ctrl+C**, and paste into Contentful."
+        )
+
+        # The preview itself
+        st.markdown(
+            f'<div id="{preview_id}">{st.session_state.cleaned_html}</div>',
+            unsafe_allow_html=True,
+        )
+
     else:
         st.info("Paste HTML on the left and click **Clean HTML** to see the result here.")
