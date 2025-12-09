@@ -80,7 +80,7 @@ def clean_html(raw_html: str) -> str:
 
         inner_html = p.decode_contents()
         normalized_inner = re.sub(r"\s+", " ", inner_html).strip()
-        new_children = BeautifulSoup(normalized_inner, HTML_PARSER)
+        new_children = BeautifulSoup(inner_html, HTML_PARSER)
 
         p.clear()
         if new_children.body:
@@ -104,7 +104,7 @@ def clean_html(raw_html: str) -> str:
 
         inner_html = li.decode_contents()
         normalized_inner = re.sub(r"\s+", " ", inner_html).strip()
-        new_children = BeautifulSoup(normalized_inner, HTML_PARSER)
+        new_children = BeautifulSoup(inner_html, HTML_PARSER)
 
         li.clear()
         if new_children.body:
@@ -124,7 +124,7 @@ def clean_html(raw_html: str) -> str:
 
             inner_html = h.decode_contents()
             normalized_inner = re.sub(r"\s+", " ", inner_html).strip()
-            new_children = BeautifulSoup(normalized_inner, HTML_PARSER)
+            new_children = BeautifulSoup(inner_html, HTML_PARSER)
 
             h.clear()
             if new_children.body:
@@ -197,10 +197,10 @@ def clear_all():
     st.session_state.cleaned_html = ""
 
 
-# ---- TOP ACTION BUTTONS --------------------------------------------------------
-btn_col1, btn_col2 = st.columns([1, 1])
+# ---- TOP ACTION BUTTONS (both left-aligned) ------------------------------------
+btn_col1, btn_col2, btn_spacer = st.columns([0.2, 0.25, 0.55])
 with btn_col1:
-    st.button("🔄 Clean HTML", type="primary", on_click=run_clean)
+    st.button("🔄 Clean HTML", on_click=run_clean)
 with btn_col2:
     st.button("🧹 Clear input & output", on_click=clear_all)
 
@@ -221,15 +221,27 @@ with col1:
 with col2:
     st.subheader("2️⃣ Cleaned preview (rendered)")
 
-    # Copy rendered content button (uses cleaned HTML as HTML clipboard)
     if st.session_state.cleaned_html:
+        # Nicely styled copy button + status text
         copy_button_html = f"""
-        <button id="copy-rendered-btn" style="margin-bottom: 0.5rem;">
-          📋 Copy rendered content
-        </button>
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
+          <button id="copy-rendered-btn"
+                  style="
+                    padding:0.4rem 0.8rem;
+                    border-radius:6px;
+                    border:1px solid #d0d0d0;
+                    background-color:#f5f5f5;
+                    font-size:0.9rem;
+                    cursor:pointer;
+                  ">
+            📋 Copy rendered content
+          </button>
+          <span id="copy-status" style="font-size:0.85rem; color:#555;"></span>
+        </div>
         <script>
         const htmlContent = {json.dumps(st.session_state.cleaned_html)};
         const btn = document.getElementById('copy-rendered-btn');
+        const status = document.getElementById('copy-status');
 
         if (btn) {{
           btn.addEventListener('click', async () => {{
@@ -239,22 +251,27 @@ with col2:
                 const item = new ClipboardItem({{"text/html": blob}});
                 await navigator.clipboard.write([item]);
               }} else {{
-                // Fallback: plain text copy
                 await navigator.clipboard.writeText(htmlContent);
               }}
-              btn.innerText = "✅ Copied!";
+              btn.style.backgroundColor = "#e6ffed";
+              btn.style.borderColor = "#34c759";
+              status.textContent = "Copied to clipboard";
+              status.style.color = "#555";
               setTimeout(() => {{
-                btn.innerText = "📋 Copy rendered content";
+                btn.style.backgroundColor = "#f5f5f5";
+                btn.style.borderColor = "#d0d0d0";
+                status.textContent = "";
               }}, 1500);
             }} catch (err) {{
               console.error(err);
-              alert("Copy failed, please click in the preview and use Ctrl+A / Ctrl+C.");
+              status.textContent = "Copy failed, please use Ctrl+A / Ctrl+C in the preview.";
+              status.style.color = "#d00";
             }}
           }});
         }}
         </script>
         """
-        components.html(copy_button_html, height=50)
+        components.html(copy_button_html, height=60)
 
         st.caption(
             "This is the cleaned HTML rendered as rich text so you can visually check headings, "
