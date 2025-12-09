@@ -197,12 +197,12 @@ def clear_all():
     st.session_state.cleaned_html = ""
 
 
-# ---- TOP ACTION BUTTONS (both left-aligned) ------------------------------------
-btn_col1, btn_col2, btn_spacer = st.columns([0.2, 0.25, 0.55])
-with btn_col1:
-    st.button("🔄 Clean HTML", on_click=run_clean)
-with btn_col2:
-    st.button("🧹 Clear input & output", on_click=clear_all)
+# ---- TOP ACTION BUTTONS (stacked vertically, left-aligned) -----------------------
+btn_col, _ = st.columns([0.3, 0.7])
+
+with btn_col:
+    st.button("🔄 Clean HTML", on_click=run_clean, use_container_width=True)
+    st.button("🧹 Clear input & output", on_click=clear_all, use_container_width=True)
 
 
 # ---- LAYOUT: INPUT (LEFT) & PREVIEW (RIGHT) ------------------------------------
