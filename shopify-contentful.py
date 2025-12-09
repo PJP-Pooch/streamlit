@@ -1,7 +1,7 @@
 import re
 import json
 import streamlit as st
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import streamlit.components.v1 as components
 
 HTML_PARSER = "html5lib"
@@ -80,7 +80,7 @@ def clean_html(raw_html: str) -> str:
 
         inner_html = p.decode_contents()
         normalized_inner = re.sub(r"\s+", " ", inner_html).strip()
-        new_children = BeautifulSoup(inner_html, HTML_PARSER)
+        new_children = BeautifulSoup(normalized_inner, HTML_PARSER)
 
         p.clear()
         if new_children.body:
@@ -104,7 +104,7 @@ def clean_html(raw_html: str) -> str:
 
         inner_html = li.decode_contents()
         normalized_inner = re.sub(r"\s+", " ", inner_html).strip()
-        new_children = BeautifulSoup(inner_html, HTML_PARSER)
+        new_children = BeautifulSoup(normalized_inner, HTML_PARSER)
 
         li.clear()
         if new_children.body:
@@ -124,7 +124,7 @@ def clean_html(raw_html: str) -> str:
 
             inner_html = h.decode_contents()
             normalized_inner = re.sub(r"\s+", " ", inner_html).strip()
-            new_children = BeautifulSoup(inner_html, HTML_PARSER)
+            new_children = BeautifulSoup(normalized_inner, HTML_PARSER)
 
             h.clear()
             if new_children.body:
@@ -133,6 +133,24 @@ def clean_html(raw_html: str) -> str:
             else:
                 for child in list(new_children.contents):
                     h.append(child)
+
+    # ---- FIX: prevent whole-paragraph bold when only first sentence should be ----
+    for p in soup.find_all("p"):
+        element_children = [c for c in p.contents if isinstance(c, Tag)]
+        if len(element_children) == 1 and element_children[0].name == "strong":
+            strong = element_children[0]
+            full_text = strong.get_text()
+            # Split on first sentence terminator
+            m = re.search(r'([.!?]["\']?\s+)', full_text)
+            if m:
+                split_idx = m.end()
+                first = full_text[:split_idx]
+                rest = full_text[split_idx:]
+                strong.clear()
+                strong.append(first)
+                if rest.strip():
+                    # normal text after the bold part
+                    strong.insert_after(soup.new_string(rest))
 
     # ---- ATTRIBUTES (keep link + iframe attrs) ----------------------------------
     iframe_safe_attrs = {
@@ -197,12 +215,11 @@ def clear_all():
     st.session_state.cleaned_html = ""
 
 
-# ---- TOP ACTION BUTTONS (stacked vertically, left-aligned) -----------------------
+# ---- TOP ACTION BUTTONS (stacked vertically, left-aligned) ---------------------
 btn_col, _ = st.columns([0.3, 0.7])
-
 with btn_col:
-    st.button("🔄 Clean HTML", on_click=run_clean, use_container_width=False)
-    st.button("🧹 Clear input & output", on_click=clear_all, use_container_width=False)
+    st.button("🔄 Clean HTML", on_click=run_clean, use_container_width=True)
+    st.button("🧹 Clear input & output", on_click=clear_all, use_container_width=True)
 
 
 # ---- LAYOUT: INPUT (LEFT) & PREVIEW (RIGHT) ------------------------------------
@@ -222,7 +239,7 @@ with col2:
     st.subheader("2️⃣ Cleaned preview (rendered)")
 
     if st.session_state.cleaned_html:
-        # Nicely styled copy button + status text
+        # Copy button with nicer styling
         copy_button_html = f"""
         <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
           <button id="copy-rendered-btn"
