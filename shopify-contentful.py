@@ -1,7 +1,7 @@
 import re
 import json
 import streamlit as st
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, Tag, NavigableString
 import streamlit.components.v1 as components
 
 HTML_PARSER = "html5lib"
@@ -24,6 +24,7 @@ def clean_html(raw_html: str) -> str:
     - Keeps iframes (e.g. YouTube / Vimeo)
     - Replaces <img> with a readable [IMAGE: ...] placeholder
     - Preserves shortcodes like [table=...], [highlight-block=...], [cta=...]
+    - Normalises list items so bullets paste cleanly into Contentful
     """
     if not isinstance(raw_html, str) or not raw_html.strip():
         return ""
@@ -34,9 +35,7 @@ def clean_html(raw_html: str) -> str:
     for img in soup.find_all("img"):
         alt = img.get("alt") or ""
         src = img.get("src") or ""
-        filename = ""
-        if src:
-            filename = src.split("/")[-1].split("?")[0]
+        filename = src.split("/")[-1].split("?")[0] if src else ""
 
         parts = [p for p in [alt.strip(), filename.strip()] if p]
         label = " / ".join(parts) if parts else "IMAGE"
@@ -137,10 +136,9 @@ def clean_html(raw_html: str) -> str:
     # ---- FIX: prevent whole-paragraph bold when only first sentence should be ----
     for p in soup.find_all("p"):
         element_children = [c for c in p.contents if isinstance(c, Tag)]
-        if len(element_children) == 1 and element_children[0].name == "strong":
+        if len(element_children) == 1 and element_children[0].name in ("strong", "b"):
             strong = element_children[0]
             full_text = strong.get_text()
-            # Split on first sentence terminator
             m = re.search(r'([.!?]["\']?\s+)', full_text)
             if m:
                 split_idx = m.end()
@@ -151,10 +149,37 @@ def clean_html(raw_html: str) -> str:
                 if rest.strip():
                     strong.insert_after(soup.new_string(rest))
 
-    # ---- NEW: unwrap paragraphs inside list items (Contentful-friendly bullets) --
+    # ---- UNWRAP <p> INSIDE LIST ITEMS (Contentful-safe bullets) -----------------
     for li in soup.find_all("li"):
         for p in list(li.find_all("p")):
             p.unwrap()
+
+    # ---- NEW: MOVE PUNCTUATION AFTER <b>/<strong> INSIDE THE TAG (IN <li>) ------
+    # e.g. <li><b>Herring</b>, or ...</li>  ->  <li><b>Herring,</b> or ...</li>
+    for li in soup.find_all("li"):
+        children = list(li.children)
+        for i, child in enumerate(children[:-1]):
+            if isinstance(child, Tag) and child.name in ("b", "strong"):
+                nxt = children[i + 1]
+                if isinstance(nxt, NavigableString):
+                    txt = str(nxt)
+                    txt_norm = txt.replace("\xa0", " ")
+                    m = re.match(r"\s*([,;:.])(\s*)(.*)", txt_norm)
+                    if m:
+                        punct, spaces, rest = m.group(1), m.group(2), m.group(3)
+
+                        # Append punctuation to the bold text
+                        if child.string is not None:
+                            child.string.replace_with(str(child.string) + punct)
+                        else:
+                            child.append(punct)
+
+                        # Keep any trailing spaces/rest as a normal text node
+                        new_txt = spaces + rest
+                        if new_txt.strip() or new_txt != "":
+                            nxt.replace_with(new_txt)
+                        else:
+                            nxt.extract()
 
     # ---- ATTRIBUTES (keep link + iframe attrs) ----------------------------------
     iframe_safe_attrs = {
@@ -241,17 +266,8 @@ with col1:
 
 with col2:
     st.subheader("2️⃣ Cleaned preview (rendered)")
-    
-    if st.session_state.cleaned_html:
-        
-        st.caption(
-            "This is the cleaned HTML rendered as rich text so you can visually check headings, "
-            "lists, links, iframes, and shortcodes.\n\n"
-            "Use **Copy rendered content** above. If that fails, click here and press **Ctrl+A**, then **Ctrl+C**."
-        )
 
-        
-        
+    if st.session_state.cleaned_html:
         # Copy button with nicer styling
         copy_button_html = f"""
         <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
@@ -302,6 +318,12 @@ with col2:
         </script>
         """
         components.html(copy_button_html, height=60)
+
+        st.caption(
+            "This is the cleaned HTML rendered as rich text so you can visually check headings, "
+            "lists, links, iframes, and shortcodes.\n\n"
+            "Use **Copy rendered content** above. If that fails, click here and press **Ctrl+A**, then **Ctrl+C**."
+        )
 
         st.markdown(
             f'<div id="clean-preview">{st.session_state.cleaned_html}</div>',
