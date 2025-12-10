@@ -155,23 +155,19 @@ def clean_html(raw_html: str) -> str:
             p.unwrap()
 
     # ---- FIX: Prevent Contentful splitting <b>Text</b> + text into separate lines ----
-    # Contentful splits bold + following text unless glue is added, so we insert a non-breaking space.
+    # Insert NBSP when bold is followed by plain text starting with a letter.
     for li in soup.find_all("li"):
         children = list(li.children)
-    
+
         for i, child in enumerate(children[:-1]):
-            # Find bold tags inside <li>
             if isinstance(child, Tag) and child.name in ("b", "strong"):
                 nxt = children[i + 1]
-    
-                # Only apply fix if next node is plain text starting with a letter
+
                 if isinstance(nxt, NavigableString) and re.match(r"^[A-Za-z]", nxt.strip()):
-                    # Insert non-breaking space to keep them together
                     new_txt = "\u00A0" + str(nxt)
                     nxt.replace_with(new_txt)
 
-
-    # ---- NEW: MOVE PUNCTUATION AFTER <b>/<strong> INSIDE THE TAG (IN <li>) ------
+    # ---- MOVE PUNCTUATION AFTER <b>/<strong> INSIDE THE TAG (IN <li>) -----------
     # e.g. <li><b>Herring</b>, or ...</li>  ->  <li><b>Herring,</b> or ...</li>
     for li in soup.find_all("li"):
         children = list(li.children)
@@ -185,18 +181,29 @@ def clean_html(raw_html: str) -> str:
                     if m:
                         punct, spaces, rest = m.group(1), m.group(2), m.group(3)
 
-                        # Append punctuation to the bold text
                         if child.string is not None:
                             child.string.replace_with(str(child.string) + punct)
                         else:
                             child.append(punct)
 
-                        # Keep any trailing spaces/rest as a normal text node
                         new_txt = spaces + rest
                         if new_txt.strip() or new_txt != "":
                             nxt.replace_with(new_txt)
                         else:
                             nxt.extract()
+
+    # ---- FINAL FIX: wrap each <li> contents in a <span> to stop Contentful splits ----
+    for li in soup.find_all("li"):
+        contents = list(li.contents)
+        if not contents:
+            continue
+
+        wrapper = soup.new_tag("span")
+        for c in contents:
+            wrapper.append(c.extract())
+
+        li.clear()
+        li.append(wrapper)
 
     # ---- ATTRIBUTES (keep link + iframe attrs) ----------------------------------
     iframe_safe_attrs = {
@@ -266,7 +273,7 @@ btn_col, _ = st.columns([0.3, 0.7])
 with btn_col:
     st.button("🧹 Clear input & output", on_click=clear_all, use_container_width=True)
     st.button("🔄 Clean HTML", on_click=run_clean, use_container_width=True)
-    
+
 
 # ---- LAYOUT: INPUT (LEFT) & PREVIEW (RIGHT) ------------------------------------
 col1, col2 = st.columns(2)
