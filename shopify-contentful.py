@@ -89,7 +89,7 @@ def clean_html(raw_html: str) -> str:
             for child in list(new_children.contents):
                 p.append(child)
 
-    # ---- LIST ITEMS -------------------------------------------------------------
+    # ---- LIST ITEMS: basic normalisation ----------------------------------------
     for li in list(soup.find_all("li")):
         text = li.get_text(" ", strip=True)
         if is_empty_or_nbsp(text):
@@ -149,13 +149,12 @@ def clean_html(raw_html: str) -> str:
                 if rest.strip():
                     strong.insert_after(soup.new_string(rest))
 
-    # ---- UNWRAP <p> INSIDE LIST ITEMS (Contentful-safe bullets) -----------------
+    # ---- UNWRAP any nested <p> INSIDE LIST ITEMS --------------------------------
     for li in soup.find_all("li"):
         for p in list(li.find_all("p")):
             p.unwrap()
 
-    # ---- FIX: Prevent Contentful splitting <b>Text</b> + text into separate lines ----
-    # Insert NBSP when bold is followed by plain text starting with a letter.
+    # ---- FIX: Prevent bold + text being split (NBSP glue) -----------------------
     for li in soup.find_all("li"):
         children = list(li.children)
 
@@ -168,7 +167,6 @@ def clean_html(raw_html: str) -> str:
                     nxt.replace_with(new_txt)
 
     # ---- MOVE PUNCTUATION AFTER <b>/<strong> INSIDE THE TAG (IN <li>) -----------
-    # e.g. <li><b>Herring</b>, or ...</li>  ->  <li><b>Herring,</b> or ...</li>
     for li in soup.find_all("li"):
         children = list(li.children)
         for i, child in enumerate(children[:-1]):
@@ -192,18 +190,24 @@ def clean_html(raw_html: str) -> str:
                         else:
                             nxt.extract()
 
-    # ---- FINAL FIX: wrap each <li> contents in a <span> to stop Contentful splits ----
+    # ---- FINAL: wrap each <li> contents in a single <p> -------------------------
+    # This gives: <li><p><strong>High in omega-3.</strong> Omega-3...</p></li>
+    # which Contentful should treat as one bullet paragraph.
     for li in soup.find_all("li"):
         contents = list(li.contents)
         if not contents:
             continue
 
-        wrapper = soup.new_tag("span")
+        # If it's already exactly one <p>, leave it
+        if len(contents) == 1 and isinstance(contents[0], Tag) and contents[0].name == "p":
+            continue
+
+        p = soup.new_tag("p")
         for c in contents:
-            wrapper.append(c.extract())
+            p.append(c.extract())
 
         li.clear()
-        li.append(wrapper)
+        li.append(p)
 
     # ---- ATTRIBUTES (keep link + iframe attrs) ----------------------------------
     iframe_safe_attrs = {
