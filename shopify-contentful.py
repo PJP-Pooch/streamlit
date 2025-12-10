@@ -190,9 +190,41 @@ def clean_html(raw_html: str) -> str:
                         else:
                             nxt.extract()
 
+    # ---- NEW: If whole <li> is bold, de-bold after a separator ------------------
+    # e.g. <li><strong>High in protein - Protein is essential...</strong></li>
+    #  ->  <li><strong>High in protein -</strong> Protein is essential...</li>
+    for li in soup.find_all("li"):
+        # ignore whitespace-only nodes
+        non_ws_children = [
+            c for c in li.contents
+            if not (isinstance(c, NavigableString) and c.strip() == "")
+        ]
+        if len(non_ws_children) == 1 and isinstance(non_ws_children[0], Tag) and non_ws_children[0].name in ("b", "strong"):
+            strong = non_ws_children[0]
+            full_text = strong.get_text()
+
+            # Try separators: dash, en dash, colon, period
+            sep_match = (
+                re.search(r"(.+?)(\s*[-–:])\s+(.*)", full_text)  # "Intro - rest"
+                or re.search(r"(.+?\.)\s+(.*)", full_text)        # "Intro. Rest"
+            )
+            if sep_match:
+                part1, sep, part2 = None, None, None
+                if len(sep_match.groups()) == 3:
+                    part1, sep, part2 = sep_match.groups()
+                    lead = part1 + sep
+                else:
+                    part1, part2 = sep_match.groups()
+                    lead = part1
+
+                if part2:
+                    # Make only the intro bold
+                    strong.clear()
+                    strong.append(lead)
+                    strong.insert_after(soup.new_string(" " + part2))
+
     # ---- FINAL: wrap each <li> contents in a single <p> -------------------------
-    # This gives: <li><p><strong>High in omega-3.</strong> Omega-3...</p></li>
-    # which Contentful should treat as one bullet paragraph.
+    # This gives: <li><p><strong>High in protein -</strong> Protein is essential...</p></li>
     for li in soup.find_all("li"):
         contents = list(li.contents)
         if not contents:
