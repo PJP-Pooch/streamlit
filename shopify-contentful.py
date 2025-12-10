@@ -149,8 +149,12 @@ def clean_html(raw_html: str) -> str:
                 strong.clear()
                 strong.append(first)
                 if rest.strip():
-                    # normal text after the bold part
                     strong.insert_after(soup.new_string(rest))
+
+    # ---- NEW: unwrap paragraphs inside list items (Contentful-friendly bullets) --
+    for li in soup.find_all("li"):
+        for p in list(li.find_all("p")):
+            p.unwrap()
 
     # ---- ATTRIBUTES (keep link + iframe attrs) ----------------------------------
     iframe_safe_attrs = {
@@ -237,8 +241,17 @@ with col1:
 
 with col2:
     st.subheader("2️⃣ Cleaned preview (rendered)")
-
+    
     if st.session_state.cleaned_html:
+        
+        st.caption(
+            "This is the cleaned HTML rendered as rich text so you can visually check headings, "
+            "lists, links, iframes, and shortcodes.\n\n"
+            "Use **Copy rendered content** above. If that fails, click here and press **Ctrl+A**, then **Ctrl+C**."
+        )
+
+        
+        
         # Copy button with nicer styling
         copy_button_html = f"""
         <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
@@ -289,12 +302,6 @@ with col2:
         </script>
         """
         components.html(copy_button_html, height=60)
-
-        st.caption(
-            "This is the cleaned HTML rendered as rich text so you can visually check headings, "
-            "lists, links, iframes, and shortcodes.\n\n"
-            "Use **Copy rendered content** above. If that fails, click here and press **Ctrl+A**, then **Ctrl+C**."
-        )
 
         st.markdown(
             f'<div id="clean-preview">{st.session_state.cleaned_html}</div>',
