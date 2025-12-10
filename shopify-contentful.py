@@ -154,6 +154,23 @@ def clean_html(raw_html: str) -> str:
         for p in list(li.find_all("p")):
             p.unwrap()
 
+    # ---- FIX: Prevent Contentful splitting <b>Text</b> + text into separate lines ----
+    # Contentful splits bold + following text unless glue is added, so we insert a non-breaking space.
+    for li in soup.find_all("li"):
+        children = list(li.children)
+    
+        for i, child in enumerate(children[:-1]):
+            # Find bold tags inside <li>
+            if isinstance(child, Tag) and child.name in ("b", "strong"):
+                nxt = children[i + 1]
+    
+                # Only apply fix if next node is plain text starting with a letter
+                if isinstance(nxt, NavigableString) and re.match(r"^[A-Za-z]", nxt.strip()):
+                    # Insert non-breaking space to keep them together
+                    new_txt = "\u00A0" + str(nxt)
+                    nxt.replace_with(new_txt)
+
+
     # ---- NEW: MOVE PUNCTUATION AFTER <b>/<strong> INSIDE THE TAG (IN <li>) ------
     # e.g. <li><b>Herring</b>, or ...</li>  ->  <li><b>Herring,</b> or ...</li>
     for li in soup.find_all("li"):
