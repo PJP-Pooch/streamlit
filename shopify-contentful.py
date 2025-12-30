@@ -329,9 +329,7 @@ with col2:
 
     if st.session_state.cleaned_html:
         # Copy button with nicer styling
-        html_content_json = json.dumps(st.session_state.cleaned_html)
-
-        copy_button_html = """
+        copy_button_html = f"""
         <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
           <button id="copy-rendered-btn"
                   style="
@@ -347,52 +345,39 @@ with col2:
           <span id="copy-status" style="font-size:0.85rem; color:#555;"></span>
         </div>
         <script>
-        const htmlContent = __HTML_CONTENT__;
+        const htmlContent = {json.dumps(st.session_state.cleaned_html)};
         const btn = document.getElementById('copy-rendered-btn');
         const status = document.getElementById('copy-status');
 
-        if (btn) {
-          btn.addEventListener('click', async () => {
-            try {
-              if (navigator.clipboard && window.ClipboardItem) {
-                const blob = new Blob([htmlContent], { type: "text/html" });
-                const item = new ClipboardItem({ "text/html": blob });
+        if (btn) {{
+          btn.addEventListener('click', async () => {{
+            try {{
+              if (navigator.clipboard && window.ClipboardItem) {{
+                const blob = new Blob([htmlContent], {{ type: "text/html" }});
+                const item = new ClipboardItem({{"text/html": blob}});
                 await navigator.clipboard.write([item]);
-              } else {
+              }} else {{
                 await navigator.clipboard.writeText(htmlContent);
-              }
-
+              }}
               btn.style.backgroundColor = "#e6ffed";
               btn.style.borderColor = "#34c759";
               status.textContent = "Copied to clipboard";
               status.style.color = "#555";
-
-              // Tell Streamlit to clear input & output
-              Streamlit.setComponentValue("clear");
-
-              setTimeout(() => {
+              setTimeout(() => {{
                 btn.style.backgroundColor = "#f5f5f5";
                 btn.style.borderColor = "#d0d0d0";
                 status.textContent = "";
-              }, 1500);
-
-            } catch (err) {
+              }}, 1500);
+            }} catch (err) {{
               console.error(err);
               status.textContent = "Copy failed, please use Ctrl+A / Ctrl+C in the preview.";
               status.style.color = "#d00";
-            }
-          });
-        }
+            }}
+          }});
+        }}
         </script>
         """
-
-        copy_button_html = copy_button_html.replace("__HTML_CONTENT__", html_content_json)
-
-        result = components.html(copy_button_html, height=60)
-
-        if result == "clear":
-            clear_all()
-            st.rerun()
+        components.html(copy_button_html, height=60)
 
         st.caption(
             "This is the cleaned HTML rendered as rich text so you can visually check headings, "
