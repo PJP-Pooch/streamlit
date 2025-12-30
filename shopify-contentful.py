@@ -349,38 +349,38 @@ with col2:
         const btn = document.getElementById('copy-rendered-btn');
         const status = document.getElementById('copy-status');
 
-      if (btn) {
-  btn.addEventListener('click', async () => {
-    try {
-      if (navigator.clipboard && window.ClipboardItem) {
-        const blob = new Blob([htmlContent], { type: "text/html" });
-        const item = new ClipboardItem({"text/html": blob});
+     if (btn) {{
+btn.addEventListener('click', async () => {{
+    try {{
+      if (navigator.clipboard && window.ClipboardItem) {{
+        const blob = new Blob([htmlContent], {{ type: "text/html" }});
+        const item = new ClipboardItem({{"text/html": blob}});
         await navigator.clipboard.write([item]);
-      } else {
+      }} else {{
         await navigator.clipboard.writeText(htmlContent);
-      }
+      }}
 
       btn.style.backgroundColor = "#e6ffed";
       btn.style.borderColor = "#34c759";
       status.textContent = "Copied to clipboard";
       status.style.color = "#555";
 
-      // 👇 Tells Streamlit to clear boxes
+      // 👇 Tell Streamlit to clear
       Streamlit.setComponentValue("clear");
 
-      setTimeout(() => {
+      setTimeout(() => {{
         btn.style.backgroundColor = "#f5f5f5";
         btn.style.borderColor = "#d0d0d0";
         status.textContent = "";
-      }, 1500);
+      }}, 1500);
 
-    } catch (err) {
+    }} catch (err) {{
       console.error(err);
       status.textContent = "Copy failed, please use Ctrl+A / Ctrl+C in the preview.";
       status.style.color = "#d00";
-    }
-  });
-}
+    }}
+  }});
+}}
         </script>
         """
         result = components.html(copy_button_html, height=60)
