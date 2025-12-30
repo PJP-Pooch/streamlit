@@ -362,6 +362,7 @@ with col2:
               btn.style.backgroundColor = "#e6ffed";
               btn.style.borderColor = "#34c759";
               status.textContent = "Copied to clipboard";
+              Streamlit.setComponentValue("clear");
               status.style.color = "#555";
               setTimeout(() => {{
                 btn.style.backgroundColor = "#f5f5f5";
@@ -377,7 +378,12 @@ with col2:
         }}
         </script>
         """
-        components.html(copy_button_html, height=60)
+        result = components.html(copy_button_html, height=60)
+
+        if result == "clear":
+            clear_all()
+            st.rerun()
+
 
         st.caption(
             "This is the cleaned HTML rendered as rich text so you can visually check headings, "
