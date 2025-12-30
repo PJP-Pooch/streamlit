@@ -350,8 +350,8 @@ with col2:
         const status = document.getElementById('copy-status');
 
      if (btn) {{
-btn.addEventListener('click', async () => {{
-    try {{
+        btn.addEventListener('click', async () => {{
+     try {{
       if (navigator.clipboard && window.ClipboardItem) {{
         const blob = new Blob([htmlContent], {{ type: "text/html" }});
         const item = new ClipboardItem({{"text/html": blob}});
